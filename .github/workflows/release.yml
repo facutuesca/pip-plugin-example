@@ -1,0 +1,41 @@
+on:
+  release:
+    types:
+      - published
+
+name: release
+
+permissions:
+  # Used to sign the release's artifacts with sigstore-python.
+  # Used to publish to PyPI with Trusted Publishing.
+  id-token: write
+
+  # Used to attach signing artifacts to the published release.
+  contents: write
+
+jobs:
+  pypi:
+    name: upload release to PyPI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: pyproject.toml
+
+    - name: build
+      run: uvx --from build pyproject-build --installer uv
+
+    - name: publish
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+    - name: sign
+      uses: sigstore/gh-action-sigstore-python@v2.1.1
+      with:
+        inputs: ./dist/*.tar.gz ./dist/*.whl
+        release-signing-artifacts: true
